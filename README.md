@@ -100,3 +100,27 @@ cp -r life-designer ~/.qoderwork/skills/life-designer
 - 融入 6 大理论体系（设计思维 / 心流 / 积极心理学 / 黄金圈 / 成长型思维 / 意义感），涵盖 20+ 本参考书
 
 欢迎 PR 和 Issue。MIT License — 随便用。
+
+---
+
+## Life Design Studio Web（阶段 0）
+
+仓库正在增加一个移动端优先、可中断恢复的 Web 体验。当前纵切片只验证最重要的数据承诺：回答先保存在本机，然后流程才前进。
+
+```bash
+pnpm install
+pnpm dev
+```
+
+打开 <http://localhost:3000>，回答三个问题。关闭页面后重新打开，系统会回到准确断点；完成后可下载不含 API Key 的 JSON 进度包。
+
+验证命令：
+
+```bash
+pnpm test
+pnpm typecheck
+pnpm test:e2e
+pnpm --filter @life-design/web build
+```
+
+阶段 0 不调用模型、不收费、也不上传云端。完整四阶段、BYOK 与托管体验将在断点恢复纵切片通过验收后逐步加入。
