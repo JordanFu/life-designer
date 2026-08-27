@@ -578,13 +578,20 @@ textarea:disabled {
   text-align: left;
 }
 
-.guided-choice:hover,
-.guided-choice:focus-visible,
 .guided-choice.selected,
 .guided-choice[aria-pressed="true"] {
   border-color: var(--accent);
   background: #f2f8f4;
   box-shadow: 0 0 0 3px rgba(49, 94, 77, 0.1);
+}
+
+.guided-choice:hover {
+  border-color: var(--accent);
+}
+
+.guided-choice:focus-visible {
+  outline: 3px solid rgba(49, 94, 77, 0.28);
+  outline-offset: 3px;
 }
 
 .guided-choice > span:first-child,

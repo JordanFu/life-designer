@@ -138,6 +138,11 @@ export function buildHereReflection(input: HereGuidance): string {
 
   const feelings = draft.feelings.map((item) => feelingLabels[item]).join('、')
   const feelingNote = draft.feelingNote ? `，你还补充说“${draft.feelingNote}”` : ''
+  const problem = draft.problemStatement
+    .replace(/^最近我最困扰的是[：:]\s*/, '')
+    .replace(/[。！？!?，,；;]+$/u, '')
+  const moment = draft.momentDetails.replace(/[。！？!?，,；;]+$/u, '')
+  const nextAction = draft.nextAction.replace(/[。！？!?，,；;]+$/u, '')
 
-  return `我听到的是：你现在最想关注的是${focusLabels[draft.focus]}。最近最困扰你的是“${draft.problemStatement}”。${timeLabels[draft.momentWindow]}，${draft.momentDetails}，那一刻你感到${feelings}${feelingNote}。你判断这件事“${boundaryLabels[draft.boundaryType]}”，这可能意味着，与其一次解决整个人生，更值得先验证一个能行动的小问题。你愿意先做的是：${draft.nextAction}。这只是根据你刚才的回答整理出的草稿，是否准确由你决定。`
+  return `我听到的是：你现在最想关注的是${focusLabels[draft.focus]}。最近真正困扰你的是“${problem}”。${timeLabels[draft.momentWindow]}，${moment}。那一刻你感到${feelings}${feelingNote}。你判断这件事“${boundaryLabels[draft.boundaryType]}”，这可能意味着，与其一次解决整个人生，更值得先验证一个能行动的小问题。你愿意先做的是：${nextAction}。这只是根据你刚才的回答整理出的草稿，是否准确由你决定。`
 }

@@ -11,7 +11,7 @@ const completeDraft: HereGuidance = {
   scores: { health: 6, work: 2, play: 4, love: 8 },
   focus: 'work',
   problemShapeId: 'work.direction',
-  problemStatement: '我想换方向，但不知道该往哪里走。',
+  problemStatement: '最近我最困扰的是：我想换方向，但不知道该往哪里走。',
   momentWindow: 'this-week',
   momentDetails: '周一开会时，我发现自己对接下来的项目完全提不起兴趣。',
   feelings: ['tired', 'lost'],
@@ -43,6 +43,7 @@ describe('guided first-stage content', () => {
     expect(reflection).toContain(completeDraft.momentDetails)
     expect(reflection).toContain('疲惫、迷茫')
     expect(reflection).toContain('可能')
+    expect(reflection).not.toContain('最近最困扰你的是“最近我最困扰的是')
     expect(reflection).not.toContain('诊断')
   })
 })
