@@ -1,10 +1,13 @@
 import {
   checkpointSchema,
+  checkpointV3Schema,
   checkpointV2Schema,
+  coachTurnDraftSchema,
   hereGuidanceSchema,
   legacyCheckpointSchema,
   lifeDesignResponseSchema,
   type DashboardResponse,
+  type CoachTurnDraft,
   type HereGuidance,
   type LifeDesignCheckpoint,
   type LifeDesignCheckpointV2,
@@ -24,7 +27,7 @@ function emptyHereGuidance(): HereGuidance {
 
 export function createCheckpoint(sessionId: string, now: string): LifeDesignCheckpoint {
   return checkpointSchema.parse({
-    schemaVersion: 3,
+    schemaVersion: 4,
     sessionId,
     revision: 1,
     createdAt: now,
@@ -37,6 +40,9 @@ export function createCheckpoint(sessionId: string, now: string): LifeDesignChec
     legacyNotes: [],
     hereGuidance: emptyHereGuidance(),
     stageReflections: {},
+    coachPendingAfter: null,
+    coachTurns: [],
+    blueprint: { status: 'idle' },
   })
 }
 
@@ -133,22 +139,38 @@ export function migrateCheckpoint(raw: unknown, now: string): LifeDesignCheckpoi
   const current = checkpointSchema.safeParse(raw)
   if (current.success) return current.data
 
+  const v3 = checkpointV3Schema.safeParse(raw)
+  if (v3.success) {
+    return checkpointSchema.parse({
+      ...v3.data,
+      schemaVersion: 4,
+      revision: v3.data.revision + 1,
+      updatedAt: now,
+      coachPendingAfter: null,
+      coachTurns: [],
+      blueprint: { status: 'idle' },
+    })
+  }
+
   const previous = checkpointV2Schema.safeParse(raw)
   if (previous.success) {
     const migratedHere = migrateV2Here(previous.data)
     return checkpointSchema.parse({
       ...migratedHere.checkpoint,
-      schemaVersion: 3,
+      schemaVersion: 4,
       revision: previous.data.revision + 1,
       updatedAt: now,
       hereGuidance: migratedHere.guidance,
       stageReflections: {},
+      coachPendingAfter: null,
+      coachTurns: [],
+      blueprint: { status: 'idle' },
     })
   }
 
   const legacy = legacyCheckpointSchema.parse(raw)
   return checkpointSchema.parse({
-    schemaVersion: 3,
+    schemaVersion: 4,
     sessionId: legacy.sessionId,
     revision: legacy.revision + 1,
     createdAt: legacy.createdAt,
@@ -161,6 +183,9 @@ export function migrateCheckpoint(raw: unknown, now: string): LifeDesignCheckpoi
     legacyNotes: legacy.answers.map((answer) => answer.text),
     hereGuidance: emptyHereGuidance(),
     stageReflections: {},
+    coachPendingAfter: null,
+    coachTurns: [],
+    blueprint: { status: 'idle' },
   })
 }
 
@@ -274,6 +299,7 @@ export function completeHereGuidance(
     pendingOperation: null,
     hereGuidance: null,
     stageReflections: { ...checkpoint.stageReflections, here: editedReflection },
+    coachPendingAfter: 'here.guided',
   })
 }
 
@@ -302,7 +328,142 @@ export function recordResponse(
       type: 'advance-step',
       stepId: checkpoint.currentStepId,
     },
+    coachPendingAfter: checkpoint.currentStepId,
   })
+}
+
+export function recordCoachTurn(
+  checkpoint: LifeDesignCheckpoint,
+  draft: CoachTurnDraft,
+  now: string,
+): LifeDesignCheckpoint {
+  if (!checkpoint.coachPendingAfter) throw new Error('No coaching moment is waiting')
+  const valid = coachTurnDraftSchema.parse(draft)
+  const anchor = checkpoint.coachPendingAfter
+  const turn = {
+    ...valid,
+    id: `${checkpoint.sessionId}:${anchor}`,
+    afterStepId: anchor,
+    createdAt: now,
+  }
+
+  return checkpointSchema.parse({
+    ...checkpoint,
+    revision: checkpoint.revision + 1,
+    updatedAt: now,
+    coachTurns: [
+      ...checkpoint.coachTurns.filter((item) => item.afterStepId !== anchor),
+      turn,
+    ],
+  })
+}
+
+export function completeCoachMoment(
+  checkpoint: LifeDesignCheckpoint,
+  followUpAnswer: string | undefined,
+  now: string,
+): LifeDesignCheckpoint {
+  const anchor = checkpoint.coachPendingAfter
+  if (!anchor) throw new Error('No coaching moment is waiting')
+  if (!checkpoint.coachTurns.some((item) => item.afterStepId === anchor)) {
+    throw new Error('Coach response has not been saved')
+  }
+  const answer = followUpAnswer?.trim()
+  const completed = checkpointSchema.parse({
+    ...checkpoint,
+    revision: checkpoint.revision + 1,
+    updatedAt: now,
+    coachPendingAfter: null,
+    coachTurns: checkpoint.coachTurns.map((item) =>
+      item.afterStepId === anchor
+        ? { ...item, followUpAnswer: answer || undefined }
+        : item,
+    ),
+  })
+
+  return completed.pendingOperation
+    ? advanceAfterSavedResponse(completed, now)
+    : completed
+}
+
+export function skipCoachMoment(
+  checkpoint: LifeDesignCheckpoint,
+  now: string,
+): LifeDesignCheckpoint {
+  if (!checkpoint.coachPendingAfter) throw new Error('No coaching moment is waiting')
+  const skipped = checkpointSchema.parse({
+    ...checkpoint,
+    revision: checkpoint.revision + 1,
+    updatedAt: now,
+    coachPendingAfter: null,
+  })
+
+  return skipped.pendingOperation ? advanceAfterSavedResponse(skipped, now) : skipped
+}
+
+export function beginBlueprint(
+  checkpoint: LifeDesignCheckpoint,
+  now: string,
+): LifeDesignCheckpoint {
+  if (checkpoint.stage !== 'complete' || checkpoint.currentStepId !== null) {
+    throw new Error('Life design materials are incomplete')
+  }
+  return checkpointSchema.parse({
+    ...checkpoint,
+    revision: checkpoint.revision + 1,
+    updatedAt: now,
+    blueprint: {
+      ...checkpoint.blueprint,
+      status: 'generating',
+      error: undefined,
+    },
+  })
+}
+
+export function completeBlueprint(
+  checkpoint: LifeDesignCheckpoint,
+  markdown: string,
+  now: string,
+): LifeDesignCheckpoint {
+  if (checkpoint.blueprint.status !== 'generating') {
+    throw new Error('Blueprint generation is not active')
+  }
+  return checkpointSchema.parse({
+    ...checkpoint,
+    revision: checkpoint.revision + 1,
+    updatedAt: now,
+    blueprint: {
+      status: 'complete',
+      markdown: markdown.trim(),
+      generatedAt: now,
+    },
+  })
+}
+
+export function failBlueprint(
+  checkpoint: LifeDesignCheckpoint,
+  message: string,
+  now: string,
+): LifeDesignCheckpoint {
+  return checkpointSchema.parse({
+    ...checkpoint,
+    revision: checkpoint.revision + 1,
+    updatedAt: now,
+    blueprint: {
+      ...checkpoint.blueprint,
+      status: 'failed',
+      error: message.trim().slice(0, 300) || '蓝图生成失败',
+    },
+  })
+}
+
+export function recoverInterruptedBlueprint(
+  checkpoint: LifeDesignCheckpoint,
+  now: string,
+): LifeDesignCheckpoint {
+  return checkpoint.blueprint.status === 'generating'
+    ? failBlueprint(checkpoint, '上次蓝图生成被中断，可以从这里重新生成。', now)
+    : checkpoint
 }
 
 export function advanceAfterSavedResponse(

@@ -135,7 +135,7 @@ export const checkpointV2Schema = z.object({
   ...checkpointFields,
 })
 
-export const checkpointSchema = z.object({
+export const checkpointV3Schema = z.object({
   schemaVersion: z.literal(3),
   ...checkpointFields,
   hereGuidance: hereGuidanceSchema.nullable(),
@@ -144,6 +144,42 @@ export const checkpointSchema = z.object({
       here: z.string().trim().min(10).max(3000).optional(),
     })
     .default({}),
+})
+
+export const coachAnchorSchema = z.union([stepIdSchema, z.literal('here.guided')])
+
+export const coachTurnDraftSchema = z.object({
+  acknowledgement: z.string().trim().min(10).max(800),
+  insight: z.string().trim().min(10).max(1000),
+  followUp: z.string().trim().min(5).max(500),
+})
+
+export const coachTurnSchema = coachTurnDraftSchema.extend({
+  id: z.string().min(1),
+  afterStepId: coachAnchorSchema,
+  followUpAnswer: z.string().trim().max(2000).optional(),
+  createdAt: z.string().datetime(),
+})
+
+export const blueprintStateSchema = z.object({
+  status: z.enum(['idle', 'generating', 'complete', 'failed']),
+  markdown: z.string().min(100).max(80_000).optional(),
+  generatedAt: z.string().datetime().optional(),
+  error: z.string().max(300).optional(),
+})
+
+export const checkpointSchema = z.object({
+  schemaVersion: z.literal(4),
+  ...checkpointFields,
+  hereGuidance: hereGuidanceSchema.nullable(),
+  stageReflections: z
+    .object({
+      here: z.string().trim().min(10).max(3000).optional(),
+    })
+    .default({}),
+  coachPendingAfter: coachAnchorSchema.nullable(),
+  coachTurns: z.array(coachTurnSchema),
+  blueprint: blueprintStateSchema,
 })
 
 const legacyQuestionIdSchema = z.enum([
@@ -184,6 +220,11 @@ export type EnergyMapResponse = z.infer<typeof energyMapResponseSchema>
 export type OdysseyPlansResponse = z.infer<typeof odysseyPlansResponseSchema>
 export type PrototypeResponse = z.infer<typeof prototypeResponseSchema>
 export type OdysseyPlan = z.infer<typeof odysseyPlanSchema>
+export type CoachAnchor = z.infer<typeof coachAnchorSchema>
+export type CoachTurnDraft = z.infer<typeof coachTurnDraftSchema>
+export type CoachTurn = z.infer<typeof coachTurnSchema>
+export type BlueprintState = z.infer<typeof blueprintStateSchema>
 export type LifeDesignCheckpoint = z.infer<typeof checkpointSchema>
+export type LifeDesignCheckpointV3 = z.infer<typeof checkpointV3Schema>
 export type LifeDesignCheckpointV2 = z.infer<typeof checkpointV2Schema>
 export type LegacyCheckpoint = z.infer<typeof legacyCheckpointSchema>

@@ -1,15 +1,22 @@
 import { describe, expect, it } from 'vitest'
-import type { HereGuidance } from './checkpoint'
+import type { HereGuidance, StepId } from './checkpoint'
 import { steps } from './steps'
 import {
   advanceAfterSavedResponse,
+  beginBlueprint,
+  completeBlueprint,
+  completeCoachMoment,
   completeHereGuidance,
   createCheckpoint,
+  failBlueprint,
   goBackHereGuidance,
   isReadyForBlueprint,
   migrateCheckpoint,
+  recordCoachTurn,
   recordResponse,
+  recoverInterruptedBlueprint,
   saveHereGuidance,
+  skipCoachMoment,
 } from './session'
 
 const startedAt = '2026-08-27T08:00:00.000Z'
@@ -30,16 +37,19 @@ const completeHereDraft: HereGuidance = {
 }
 
 describe('four-stage life-design session', () => {
-  it('starts a v3 checkpoint at the guided welcome micro-step', () => {
+  it('starts a v4 checkpoint at the guided welcome micro-step', () => {
     const checkpoint = createCheckpoint('session-1', startedAt)
 
-    expect(checkpoint.schemaVersion).toBe(3)
+    expect(checkpoint.schemaVersion).toBe(4)
     expect(checkpoint.hereGuidance).toMatchObject({
       currentMicroStepId: 'here.welcome',
       feelings: [],
       feelingNote: '',
     })
     expect(checkpoint.currentStepId).toBe('here.dashboard')
+    expect(checkpoint.coachPendingAfter).toBeNull()
+    expect(checkpoint.coachTurns).toEqual([])
+    expect(checkpoint.blueprint).toEqual({ status: 'idle' })
   })
 
   it('saves and returns between guided micro-steps without losing answers', () => {
@@ -91,6 +101,7 @@ describe('four-stage life-design session', () => {
       expect.arrayContaining(['here.dashboard', 'here.primary-problem', 'here.why-now']),
     )
     expect(completed.responses.filter((item) => item.stepId.startsWith('here.'))).toHaveLength(3)
+    expect(completed.coachPendingAfter).toBe('here.guided')
   })
 
   it('migrates a partially completed v2 session to the first missing guided moment', () => {
@@ -122,7 +133,7 @@ describe('four-stage life-design session', () => {
       '2026-08-27T09:00:00.000Z',
     )
 
-    expect(migrated.schemaVersion).toBe(3)
+    expect(migrated.schemaVersion).toBe(4)
     expect(migrated.responses).toHaveLength(2)
     expect(migrated.hereGuidance).toMatchObject({
       currentMicroStepId: 'here.moment-when',
@@ -166,6 +177,7 @@ describe('four-stage life-design session', () => {
       type: 'advance-step',
       stepId: 'here.dashboard',
     })
+    expect(saved.coachPendingAfter).toBe('here.dashboard')
     expect(isReadyForBlueprint(saved)).toBe(false)
   })
 
@@ -202,7 +214,7 @@ describe('four-stage life-design session', () => {
 
     for (const response of responses) {
       checkpoint = recordResponse(checkpoint, response, answeredAt)
-      checkpoint = advanceAfterSavedResponse(checkpoint, answeredAt)
+      checkpoint = skipCoachMoment(checkpoint, answeredAt)
     }
 
     expect(checkpoint.currentStepId).toBe('compass.workview')
@@ -230,7 +242,7 @@ describe('four-stage life-design session', () => {
       '2026-08-27T09:00:00.000Z',
     )
 
-    expect(migrated.schemaVersion).toBe(3)
+    expect(migrated.schemaVersion).toBe(4)
     expect(migrated.currentStepId).toBe('here.dashboard')
     expect(migrated.hereGuidance?.currentMicroStepId).toBe('here.welcome')
     expect(migrated.legacyNotes).toEqual([
@@ -240,5 +252,96 @@ describe('four-stage life-design session', () => {
     ])
     expect(migrated.responses).toEqual([])
     expect(isReadyForBlueprint(migrated)).toBe(false)
+  })
+
+  it('keeps the canonical cursor still until the saved coach moment is completed', () => {
+    const initial = {
+      ...createCheckpoint('coach-session', startedAt),
+      hereGuidance: null,
+      stage: 'compass' as const,
+      currentStepId: 'compass.workview' as const,
+      completedStepIds: ['here.dashboard', 'here.primary-problem', 'here.why-now'] as StepId[],
+    }
+    const recorded = recordResponse(
+      initial,
+      { stepId: 'compass.workview', kind: 'text', text: '工作是创造价值和保持自主。' },
+      answeredAt,
+    )
+    expect(recorded.currentStepId).toBe('compass.workview')
+    expect(recorded.coachPendingAfter).toBe('compass.workview')
+
+    const withTurn = recordCoachTurn(
+      recorded,
+      {
+        acknowledgement: '你把工作看成创造价值的方式，同时也很看重自主。',
+        insight: '这里可能存在自主与稳定之间需要被看见的拉扯。',
+        followUp: '最近哪一次工作让你感到这两者同时出现？',
+      },
+      '2026-08-27T08:02:00.000Z',
+    )
+    expect(withTurn.currentStepId).toBe('compass.workview')
+    expect(withTurn.coachPendingAfter).toBe('compass.workview')
+
+    const advanced = completeCoachMoment(
+      withTurn,
+      '上个月的一次跨团队产品项目。',
+      '2026-08-27T08:03:00.000Z',
+    )
+    expect(advanced.currentStepId).toBe('compass.lifeview')
+    expect(advanced.coachPendingAfter).toBeNull()
+    expect(advanced.coachTurns.at(-1)?.followUpAnswer).toBe('上个月的一次跨团队产品项目。')
+  })
+
+  it('can skip a failed coach response without losing or duplicating the saved answer', () => {
+    const initial = {
+      ...createCheckpoint('skip-session', startedAt),
+      hereGuidance: null,
+      stage: 'compass' as const,
+      currentStepId: 'compass.workview' as const,
+      completedStepIds: ['here.dashboard', 'here.primary-problem', 'here.why-now'] as StepId[],
+    }
+    const recorded = recordResponse(
+      initial,
+      { stepId: 'compass.workview', kind: 'text', text: '工作意味着有选择地创造。' },
+      answeredAt,
+    )
+    const skipped = skipCoachMoment(recorded, '2026-08-27T08:02:00.000Z')
+
+    expect(skipped.currentStepId).toBe('compass.lifeview')
+    expect(skipped.responses.filter((item) => item.stepId === 'compass.workview')).toHaveLength(1)
+    expect(skipped.coachTurns).toEqual([])
+  })
+
+  it('persists blueprint success and recovers an interrupted generation without deleting old content', () => {
+    const complete = {
+      ...createCheckpoint('blueprint-session', startedAt),
+      hereGuidance: null,
+      stage: 'complete' as const,
+      currentStepId: null,
+      completedStepIds: steps.map((step) => step.id),
+      blueprint: {
+        status: 'complete' as const,
+        markdown: `# 旧蓝图\n\n${'这是已经完成并保存的旧版本内容，重新生成时必须保留。'.repeat(5)}`,
+        generatedAt: answeredAt,
+      },
+    }
+    const generating = beginBlueprint(complete, '2026-08-27T08:04:00.000Z')
+    expect(generating.blueprint.markdown).toContain('旧蓝图')
+
+    const recovered = recoverInterruptedBlueprint(generating, '2026-08-27T08:05:00.000Z')
+    expect(recovered.blueprint.status).toBe('failed')
+    expect(recovered.blueprint.markdown).toContain('旧蓝图')
+
+    const failed = failBlueprint(recovered, '本地 Codex 暂时不可用', '2026-08-27T08:06:00.000Z')
+    expect(failed.blueprint.error).toBe('本地 Codex 暂时不可用')
+
+    const succeeded = completeBlueprint(
+      beginBlueprint(failed, '2026-08-27T08:07:00.000Z'),
+      `# 新蓝图\n\n${'这是一份根据完整人生设计素材生成的新蓝图，包含真实行动与复盘。'.repeat(5)}`,
+      '2026-08-27T08:08:00.000Z',
+    )
+    expect(succeeded.blueprint.status).toBe('complete')
+    expect(succeeded.blueprint.markdown).toContain('新蓝图')
+    expect(succeeded.blueprint.error).toBeUndefined()
   })
 })
