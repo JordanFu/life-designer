@@ -1,0 +1,11 @@
+{
+  "name": "life-design-studio",
+  "private": true,
+  "packageManager": "pnpm@10.32.1",
+  "scripts": {
+    "dev": "pnpm --filter @life-design/web dev",
+    "test": "pnpm -r test",
+    "typecheck": "pnpm -r typecheck",
+    "test:e2e": "pnpm --filter @life-design/web test:e2e"
+  }
+}

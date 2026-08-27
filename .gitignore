@@ -1,3 +1,11 @@
 .DS_Store
 *.bak
 output/
+.worktrees/
+node_modules/
+.next/
+coverage/
+playwright-report/
+test-results/
+*.tsbuildinfo
+__pycache__/
