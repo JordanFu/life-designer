@@ -121,10 +121,11 @@ Create `apps/web/package.json`:
 {
   "name": "@life-design/web",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "test": "vitest run",
+    "test": "vitest run --passWithNoTests",
     "typecheck": "tsc --noEmit",
     "test:e2e": "playwright test"
   },
