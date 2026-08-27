@@ -50,21 +50,25 @@ export function useLifeDesignSession(repository: CheckpointRepository) {
 
   const answer = useCallback(
     async (text: string) => {
-      if (!checkpoint) return
+      if (!checkpoint) return false
       setStatus('saving')
       setError(null)
+      let answerWasSaved = false
       try {
         const recorded = recordAnswer(checkpoint, text, new Date().toISOString())
         await repository.save(recorded)
+        answerWasSaved = true
         setCheckpoint(recorded)
 
         const advanced = advanceAfterSavedAnswer(recorded, new Date().toISOString())
         await repository.save(advanced)
         setCheckpoint(advanced)
         setStatus('ready')
+        return true
       } catch (cause) {
         setError(cause instanceof Error ? cause.message : '保存失败')
         setStatus('error')
+        return answerWasSaved
       }
     },
     [checkpoint, repository],
