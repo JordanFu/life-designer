@@ -108,10 +108,10 @@ export function dashboardAnchor(score: number): string {
   return dashboardAnchors.find((anchor) => score >= anchor.min && score <= anchor.max)?.label ?? ''
 }
 
-export function recommendFocus(scores: DashboardResponse['scores']): FocusKey[] {
-  return [...focusOrder]
+export function recommendFocus(scores: DashboardResponse['scores']): [FocusKey, FocusKey] {
+  const ranked = [...focusOrder]
     .sort((left, right) => scores[left] - scores[right] || focusOrder.indexOf(left) - focusOrder.indexOf(right))
-    .slice(0, 2)
+  return [ranked[0] ?? 'health', ranked[1] ?? 'work']
 }
 
 export function problemOptionsFor(focus: FocusKey): GuidanceOption[] {

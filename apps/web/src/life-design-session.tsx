@@ -10,6 +10,7 @@ import {
   type LifeDesignStage,
 } from '@life-design/core'
 import { StepForm } from './step-form'
+import { GuidedHereFlow } from './guided-here-flow'
 import { useLifeDesignSession } from './use-life-design-session'
 
 const stageOrder: Array<Exclude<LifeDesignStage, 'complete'>> = [
@@ -21,8 +22,17 @@ const stageOrder: Array<Exclude<LifeDesignStage, 'complete'>> = [
 
 export function LifeDesignSession() {
   const repository = useMemo(() => new CheckpointRepository(), [])
-  const { checkpoint, step, status, error, submitResponse, exportCheckpoint } =
-    useLifeDesignSession(repository)
+  const {
+    checkpoint,
+    step,
+    status,
+    error,
+    submitResponse,
+    saveHereDraft,
+    goBackHere,
+    completeHere,
+    exportCheckpoint,
+  } = useLifeDesignSession(repository)
 
   useEffect(() => () => repository.close(), [repository])
 
@@ -69,7 +79,20 @@ export function LifeDesignSession() {
         </aside>
       )}
 
-      {step ? (
+      {checkpoint.hereGuidance ? (
+        <>
+          <GuidedHereFlow
+            guidance={checkpoint.hereGuidance}
+            disabled={status === 'saving'}
+            onSave={saveHereDraft}
+            onBack={goBackHere}
+            onComplete={completeHere}
+          />
+          <p className="pause-note">
+            可以随时关闭页面。每个小选择都会先保存在这台设备上，下次从这里继续。
+          </p>
+        </>
+      ) : step ? (
         <>
           <section className="step-card" aria-live="polite">
             <div className="step-meta">

@@ -379,6 +379,315 @@ textarea:disabled {
   color: var(--danger);
 }
 
+.guided-flow {
+  display: grid;
+  gap: 16px;
+}
+
+.guided-progress-block {
+  display: grid;
+  gap: 8px;
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.guided-progress-block > div:first-child {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.guided-progress-track {
+  height: 5px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(49, 94, 77, 0.12);
+}
+
+.guided-progress-track span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent);
+  transition: width 220ms ease;
+}
+
+.coach-card,
+.response-card {
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.84);
+  box-shadow: 0 18px 55px rgba(50, 60, 55, 0.06);
+}
+
+.coach-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 26px 26px 26px 8px;
+  padding: 24px;
+}
+
+.coach-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  background: var(--accent);
+}
+
+.coach-eyebrow {
+  margin: 0 0 9px;
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.coach-card h2 {
+  margin: 0;
+  font-size: clamp(26px, 6vw, 38px);
+  font-weight: 600;
+}
+
+.coach-message {
+  margin-top: 14px;
+  color: #48544e;
+  font: 500 17px/1.75 ui-serif, "Songti SC", serif;
+}
+
+.coach-message p {
+  margin: 0;
+}
+
+.coach-message p + p {
+  margin-top: 8px;
+}
+
+.response-card {
+  display: grid;
+  gap: 18px;
+  border-radius: 8px 24px 24px 24px;
+  padding: 20px;
+}
+
+.response-card > button:not(.back-button),
+.response-card > .guided-actions,
+.response-card > .guided-actions button:last-child {
+  width: 100%;
+}
+
+.welcome-promise {
+  display: grid;
+  gap: 9px;
+}
+
+.welcome-promise span {
+  position: relative;
+  padding-left: 25px;
+  color: #48544e;
+  line-height: 1.5;
+}
+
+.welcome-promise span::before {
+  content: "✓";
+  position: absolute;
+  left: 0;
+  color: var(--accent);
+  font-weight: 900;
+}
+
+.guide-details {
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  padding: 12px 0;
+  color: var(--muted);
+}
+
+.guide-details summary {
+  color: var(--accent);
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.guide-details p {
+  margin: 9px 0 0;
+  line-height: 1.65;
+}
+
+.guided-score-grid,
+.guided-choice-grid {
+  display: grid;
+  gap: 11px;
+}
+
+.guided-score-card {
+  display: grid;
+  gap: 12px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: #fff;
+  padding: 15px;
+}
+
+.score-heading {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.score-heading > span {
+  display: grid;
+  gap: 3px;
+}
+
+.score-heading small {
+  color: var(--muted);
+}
+
+.score-heading output,
+.choice-score {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 800;
+}
+
+.score-anchor {
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.guided-choice {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 6px 12px;
+  min-height: 0;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: #fff;
+  padding: 15px;
+  color: var(--ink);
+  text-align: left;
+}
+
+.guided-choice:hover,
+.guided-choice:focus-visible,
+.guided-choice.selected,
+.guided-choice[aria-pressed="true"] {
+  border-color: var(--accent);
+  background: #f2f8f4;
+  box-shadow: 0 0 0 3px rgba(49, 94, 77, 0.1);
+}
+
+.guided-choice > span:first-child,
+.guided-choice.text-choice {
+  display: grid;
+  gap: 4px;
+}
+
+.guided-choice small {
+  color: var(--muted);
+  font-weight: 500;
+  line-height: 1.45;
+}
+
+.guided-choice em {
+  grid-column: 1 / -1;
+  width: max-content;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  padding: 3px 8px;
+  color: var(--accent);
+  font-size: 11px;
+  font-style: normal;
+}
+
+.guided-choice.text-choice {
+  grid-template-columns: 1fr;
+}
+
+.guided-field {
+  display: grid;
+  gap: 8px;
+  color: #48544e;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.guided-field input,
+.guided-field textarea {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 15px;
+  background: #fff;
+  padding: 13px 14px;
+  color: var(--ink);
+  font-weight: 500;
+  line-height: 1.6;
+}
+
+.guided-field textarea {
+  resize: vertical;
+}
+
+.guided-field.compact {
+  margin-top: 2px;
+}
+
+.guided-actions {
+  display: grid;
+  grid-template-columns: minmax(120px, auto) minmax(0, 1fr);
+  gap: 10px;
+}
+
+.guided-actions .back-button,
+.response-card > .back-button {
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--muted);
+}
+
+.feeling-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.feeling-grid button {
+  min-height: 46px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fff;
+  color: var(--ink);
+}
+
+.feeling-grid button.selected,
+.feeling-grid button[aria-pressed="true"] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.reflection-field textarea {
+  background: #fbfaf6;
+  font: 500 16px/1.8 ui-serif, "Songti SC", serif;
+}
+
+.reflection-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
 @media (min-width: 720px) {
   .shell {
     padding-top: 54px;
@@ -396,6 +705,10 @@ textarea:disabled {
 
   .event-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .guided-choice-grid:not(.problem-choices):not(.boundary-grid) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -417,5 +730,18 @@ textarea:disabled {
   .rating-grid,
   .choice-grid.three {
     grid-template-columns: 1fr;
+  }
+
+  .guided-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .guided-actions .back-button {
+    order: 2;
+  }
+
+  .coach-card,
+  .response-card {
+    padding: 18px;
   }
 }
