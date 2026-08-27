@@ -31,4 +31,35 @@ describe('CheckpointRepository', () => {
     await repository.save({ ...revisionOne, revision: 2 })
     await expect(repository.save(revisionOne)).rejects.toThrow('Stale checkpoint revision')
   })
+
+  it('migrates a persisted Stage 0 checkpoint without treating it as complete', async () => {
+    const repository = new CheckpointRepository('migration-test')
+    repositories.push(repository)
+    await repository.checkpoints.put({
+      schemaVersion: 1,
+      sessionId: 'legacy-session',
+      revision: 7,
+      createdAt: '2026-08-27T08:00:00.000Z',
+      updatedAt: '2026-08-27T08:03:00.000Z',
+      stage: 'here',
+      currentQuestionId: null,
+      completedQuestionIds: ['here.dashboard', 'here.primary-problem', 'here.why-now'],
+      answers: [
+        {
+          questionId: 'here.primary-problem',
+          text: '工作让我焦虑。',
+          answeredAt: '2026-08-27T08:02:00.000Z',
+        },
+      ],
+      pendingOperation: null,
+    } as never)
+
+    const migrated = await repository.load('legacy-session')
+    expect(migrated).toMatchObject({
+      schemaVersion: 2,
+      currentStepId: 'here.dashboard',
+      legacyNotes: ['工作让我焦虑。'],
+    })
+    expect(await repository.checkpoints.get('legacy-session')).toMatchObject({ schemaVersion: 2 })
+  })
 })

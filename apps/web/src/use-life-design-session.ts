@@ -3,11 +3,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { CheckpointRepository } from '@life-design/checkpoint'
 import {
-  advanceAfterSavedAnswer,
+  advanceAfterSavedResponse,
   createCheckpoint,
-  questions,
-  recordAnswer,
+  getStep,
+  recordResponse,
   type LifeDesignCheckpoint,
+  type LifeDesignResponse,
 } from '@life-design/core'
 
 const SESSION_KEY = 'life-design-active-session'
@@ -26,7 +27,7 @@ export function useLifeDesignSession(repository: CheckpointRepository) {
       let next = restored ?? createCheckpoint(crypto.randomUUID(), new Date().toISOString())
       if (!restored) await repository.save(next)
       if (next.pendingOperation) {
-        next = advanceAfterSavedAnswer(next, new Date().toISOString())
+        next = advanceAfterSavedResponse(next, new Date().toISOString())
         await repository.save(next)
       }
       localStorage.setItem(SESSION_KEY, next.sessionId)
@@ -48,19 +49,19 @@ export function useLifeDesignSession(repository: CheckpointRepository) {
     }
   }, [repository])
 
-  const answer = useCallback(
-    async (text: string) => {
+  const submitResponse = useCallback(
+    async (response: LifeDesignResponse) => {
       if (!checkpoint) return false
       setStatus('saving')
       setError(null)
-      let answerWasSaved = false
+      let responseWasSaved = false
       try {
-        const recorded = recordAnswer(checkpoint, text, new Date().toISOString())
+        const recorded = recordResponse(checkpoint, response, new Date().toISOString())
         await repository.save(recorded)
-        answerWasSaved = true
+        responseWasSaved = true
         setCheckpoint(recorded)
 
-        const advanced = advanceAfterSavedAnswer(recorded, new Date().toISOString())
+        const advanced = advanceAfterSavedResponse(recorded, new Date().toISOString())
         await repository.save(advanced)
         setCheckpoint(advanced)
         setStatus('ready')
@@ -68,7 +69,7 @@ export function useLifeDesignSession(repository: CheckpointRepository) {
       } catch (cause) {
         setError(cause instanceof Error ? cause.message : '保存失败')
         setStatus('error')
-        return answerWasSaved
+        return responseWasSaved
       }
     },
     [checkpoint, repository],
@@ -81,17 +82,17 @@ export function useLifeDesignSession(repository: CheckpointRepository) {
     })
     const link = document.createElement('a')
     link.href = URL.createObjectURL(blob)
-    link.download = `life-design-checkpoint-${checkpoint.sessionId}.json`
+    link.download = `life-design-materials-${checkpoint.sessionId}.json`
     document.body.append(link)
     link.click()
     link.remove()
     URL.revokeObjectURL(link.href)
   }, [checkpoint])
 
-  const question = useMemo(
-    () => questions.find((item) => item.id === checkpoint?.currentQuestionId) ?? null,
-    [checkpoint?.currentQuestionId],
+  const step = useMemo(
+    () => getStep(checkpoint?.currentStepId ?? null),
+    [checkpoint?.currentStepId],
   )
 
-  return { checkpoint, question, status, error, answer, exportCheckpoint }
+  return { checkpoint, step, status, error, submitResponse, exportCheckpoint }
 }

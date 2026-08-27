@@ -1,6 +1,7 @@
 import Dexie, { type EntityTable } from 'dexie'
 import {
   checkpointSchema,
+  migrateCheckpoint,
   type LifeDesignCheckpoint,
 } from '@life-design/core'
 
@@ -25,7 +26,12 @@ export class CheckpointRepository extends Dexie {
 
   async load(sessionId: string): Promise<LifeDesignCheckpoint | null> {
     const value = await this.checkpoints.get(sessionId)
-    return value ? checkpointSchema.parse(value) : null
+    if (!value) return null
+    const migrated = migrateCheckpoint(value, new Date().toISOString())
+    if ((value as { schemaVersion?: number }).schemaVersion !== migrated.schemaVersion) {
+      await this.save(migrated)
+    }
+    return migrated
   }
 
   async deleteSession(sessionId: string): Promise<void> {
