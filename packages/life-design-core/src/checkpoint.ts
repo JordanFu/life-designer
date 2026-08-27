@@ -85,8 +85,37 @@ export const lifeDesignResponseSchema = z.discriminatedUnion('kind', [
   prototypeResponseSchema,
 ])
 
-export const checkpointSchema = z.object({
-  schemaVersion: z.literal(2),
+export const hereMicroStepIdSchema = z.enum([
+  'here.welcome',
+  'here.dashboard',
+  'here.focus',
+  'here.problem-shape',
+  'here.moment-when',
+  'here.moment-event',
+  'here.feelings',
+  'here.boundaries',
+  'here.summary',
+])
+
+export const hereGuidanceSchema = z.object({
+  currentMicroStepId: hereMicroStepIdSchema,
+  scores: dashboardResponseSchema.shape.scores.optional(),
+  focus: z.enum(['health', 'work', 'play', 'love']).optional(),
+  problemShapeId: z.string().min(1).max(80).optional(),
+  problemStatement: z.string().trim().min(2).max(1000).optional(),
+  momentWindow: z.enum(['today', 'this-week', 'this-month', 'longer']).optional(),
+  momentDetails: z.string().trim().min(2).max(1500).optional(),
+  feelings: z
+    .array(z.enum(['anxious', 'tired', 'lost', 'angry', 'sad', 'numb', 'lonely', 'hopeful']))
+    .max(2)
+    .default([]),
+  feelingNote: z.string().trim().max(300).default(''),
+  boundaryType: z.enum(['direct', 'influence', 'gravity', 'mixed']).optional(),
+  nextAction: z.string().trim().min(2).max(500).optional(),
+  reflection: z.string().trim().min(10).max(3000).optional(),
+})
+
+const checkpointFields = {
   sessionId: z.string().min(1),
   revision: z.number().int().positive(),
   createdAt: z.string().datetime(),
@@ -99,6 +128,17 @@ export const checkpointSchema = z.object({
     .object({ type: z.literal('advance-step'), stepId: stepIdSchema })
     .nullable(),
   legacyNotes: z.array(z.string()).default([]),
+}
+
+export const checkpointV2Schema = z.object({
+  schemaVersion: z.literal(2),
+  ...checkpointFields,
+})
+
+export const checkpointSchema = z.object({
+  schemaVersion: z.literal(3),
+  ...checkpointFields,
+  hereGuidance: hereGuidanceSchema.nullable(),
 })
 
 const legacyQuestionIdSchema = z.enum([
@@ -130,6 +170,8 @@ export const legacyCheckpointSchema = z.object({
 
 export type LifeDesignStage = z.infer<typeof stageSchema>
 export type StepId = z.infer<typeof stepIdSchema>
+export type HereMicroStepId = z.infer<typeof hereMicroStepIdSchema>
+export type HereGuidance = z.infer<typeof hereGuidanceSchema>
 export type LifeDesignResponse = z.infer<typeof lifeDesignResponseSchema>
 export type DashboardResponse = z.infer<typeof dashboardResponseSchema>
 export type TextResponse = z.infer<typeof textResponseSchema>
@@ -138,4 +180,5 @@ export type OdysseyPlansResponse = z.infer<typeof odysseyPlansResponseSchema>
 export type PrototypeResponse = z.infer<typeof prototypeResponseSchema>
 export type OdysseyPlan = z.infer<typeof odysseyPlanSchema>
 export type LifeDesignCheckpoint = z.infer<typeof checkpointSchema>
+export type LifeDesignCheckpointV2 = z.infer<typeof checkpointV2Schema>
 export type LegacyCheckpoint = z.infer<typeof legacyCheckpointSchema>

@@ -12,6 +12,18 @@ const startedAt = '2026-08-27T08:00:00.000Z'
 const answeredAt = '2026-08-27T08:01:00.000Z'
 
 describe('four-stage life-design session', () => {
+  it('starts a v3 checkpoint at the guided welcome micro-step', () => {
+    const checkpoint = createCheckpoint('session-1', startedAt)
+
+    expect(checkpoint.schemaVersion).toBe(3)
+    expect(checkpoint.hereGuidance).toMatchObject({
+      currentMicroStepId: 'here.welcome',
+      feelings: [],
+      feelingNote: '',
+    })
+    expect(checkpoint.currentStepId).toBe('here.dashboard')
+  })
+
   it('uses eight canonical mixed-input steps across four stages', () => {
     expect(steps.map((step) => step.id)).toEqual([
       'here.dashboard',
@@ -110,8 +122,9 @@ describe('four-stage life-design session', () => {
       '2026-08-27T09:00:00.000Z',
     )
 
-    expect(migrated.schemaVersion).toBe(2)
+    expect(migrated.schemaVersion).toBe(3)
     expect(migrated.currentStepId).toBe('here.dashboard')
+    expect(migrated.hereGuidance?.currentMicroStepId).toBe('here.welcome')
     expect(migrated.legacyNotes).toEqual([
       '工作 3 分。',
       '工作让我焦虑。',

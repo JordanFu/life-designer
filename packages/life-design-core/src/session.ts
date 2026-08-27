@@ -1,5 +1,6 @@
 import {
   checkpointSchema,
+  checkpointV2Schema,
   legacyCheckpointSchema,
   lifeDesignResponseSchema,
   type LifeDesignCheckpoint,
@@ -9,7 +10,7 @@ import { steps } from './steps'
 
 export function createCheckpoint(sessionId: string, now: string): LifeDesignCheckpoint {
   return checkpointSchema.parse({
-    schemaVersion: 2,
+    schemaVersion: 3,
     sessionId,
     revision: 1,
     createdAt: now,
@@ -20,6 +21,11 @@ export function createCheckpoint(sessionId: string, now: string): LifeDesignChec
     responses: [],
     pendingOperation: null,
     legacyNotes: [],
+    hereGuidance: {
+      currentMicroStepId: 'here.welcome',
+      feelings: [],
+      feelingNote: '',
+    },
   })
 }
 
@@ -27,9 +33,27 @@ export function migrateCheckpoint(raw: unknown, now: string): LifeDesignCheckpoi
   const current = checkpointSchema.safeParse(raw)
   if (current.success) return current.data
 
+  const previous = checkpointV2Schema.safeParse(raw)
+  if (previous.success) {
+    return checkpointSchema.parse({
+      ...previous.data,
+      schemaVersion: 3,
+      revision: previous.data.revision + 1,
+      updatedAt: now,
+      hereGuidance:
+        previous.data.stage === 'here'
+          ? {
+              currentMicroStepId: 'here.welcome',
+              feelings: [],
+              feelingNote: '',
+            }
+          : null,
+    })
+  }
+
   const legacy = legacyCheckpointSchema.parse(raw)
   return checkpointSchema.parse({
-    schemaVersion: 2,
+    schemaVersion: 3,
     sessionId: legacy.sessionId,
     revision: legacy.revision + 1,
     createdAt: legacy.createdAt,
@@ -40,6 +64,11 @@ export function migrateCheckpoint(raw: unknown, now: string): LifeDesignCheckpoi
     responses: [],
     pendingOperation: null,
     legacyNotes: legacy.answers.map((answer) => answer.text),
+    hereGuidance: {
+      currentMicroStepId: 'here.welcome',
+      feelings: [],
+      feelingNote: '',
+    },
   })
 }
 
