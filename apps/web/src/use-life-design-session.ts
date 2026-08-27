@@ -4,9 +4,13 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { CheckpointRepository } from '@life-design/checkpoint'
 import {
   advanceAfterSavedResponse,
+  completeHereGuidance,
   createCheckpoint,
   getStep,
+  goBackHereGuidance,
   recordResponse,
+  saveHereGuidance,
+  type HereGuidance,
   type LifeDesignCheckpoint,
   type LifeDesignResponse,
 } from '@life-design/core'
@@ -75,6 +79,45 @@ export function useLifeDesignSession(repository: CheckpointRepository) {
     [checkpoint, repository],
   )
 
+  const persistGuidedChange = useCallback(
+    async (
+      transition: (current: LifeDesignCheckpoint, now: string) => LifeDesignCheckpoint,
+    ) => {
+      if (!checkpoint) return false
+      setStatus('saving')
+      setError(null)
+      try {
+        const next = transition(checkpoint, new Date().toISOString())
+        await repository.save(next)
+        setCheckpoint(next)
+        setStatus('ready')
+        return true
+      } catch (cause) {
+        setError(cause instanceof Error ? cause.message : '保存失败')
+        setStatus('error')
+        return false
+      }
+    },
+    [checkpoint, repository],
+  )
+
+  const saveHereDraft = useCallback(
+    (guidance: HereGuidance) =>
+      persistGuidedChange((current, now) => saveHereGuidance(current, guidance, now)),
+    [persistGuidedChange],
+  )
+
+  const goBackHere = useCallback(
+    () => persistGuidedChange((current, now) => goBackHereGuidance(current, now)),
+    [persistGuidedChange],
+  )
+
+  const completeHere = useCallback(
+    (reflection: string) =>
+      persistGuidedChange((current, now) => completeHereGuidance(current, reflection, now)),
+    [persistGuidedChange],
+  )
+
   const exportCheckpoint = useCallback(() => {
     if (!checkpoint) return
     const blob = new Blob([JSON.stringify(checkpoint, null, 2)], {
@@ -94,5 +137,15 @@ export function useLifeDesignSession(repository: CheckpointRepository) {
     [checkpoint?.currentStepId],
   )
 
-  return { checkpoint, step, status, error, submitResponse, exportCheckpoint }
+  return {
+    checkpoint,
+    step,
+    status,
+    error,
+    submitResponse,
+    saveHereDraft,
+    goBackHere,
+    completeHere,
+    exportCheckpoint,
+  }
 }
