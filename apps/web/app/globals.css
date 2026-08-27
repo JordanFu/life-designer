@@ -815,6 +815,116 @@ textarea:disabled {
   to { transform: translateX(210%); }
 }
 
+.blueprint-start {
+  display: grid;
+  gap: 16px;
+}
+
+.blueprint-start > button,
+.blueprint-actions > button,
+.blueprint-warning > button {
+  width: 100%;
+}
+
+.blueprint-start small {
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.blueprint-shell {
+  display: grid;
+  gap: 18px;
+}
+
+.blueprint-document {
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 22px 70px rgba(50, 60, 55, 0.08);
+  padding: clamp(22px, 6vw, 48px);
+}
+
+.blueprint-document h1,
+.blueprint-document h2,
+.blueprint-document h3,
+.blueprint-document p {
+  overflow-wrap: anywhere;
+}
+
+.blueprint-document h1 {
+  margin: 0 0 30px;
+  font: 600 clamp(30px, 7vw, 48px)/1.25 ui-serif, "Songti SC", serif;
+}
+
+.blueprint-document h2 {
+  margin: 38px 0 14px;
+  border-top: 1px solid var(--line);
+  padding-top: 28px;
+  font-size: clamp(23px, 5vw, 31px);
+}
+
+.blueprint-document h3 {
+  margin: 24px 0 10px;
+  color: var(--accent);
+  font-size: 18px;
+}
+
+.blueprint-document p {
+  margin: 0 0 12px;
+  font: 500 16px/1.9 ui-serif, "Songti SC", serif;
+}
+
+.blueprint-document .blueprint-list-item {
+  position: relative;
+  padding-left: 18px;
+}
+
+.blueprint-document .blueprint-list-item::before {
+  position: absolute;
+  left: 2px;
+  content: "·";
+  color: var(--accent);
+}
+
+.blueprint-space {
+  height: 8px;
+}
+
+.blueprint-actions,
+.blueprint-warning {
+  display: grid;
+  gap: 10px;
+}
+
+.blueprint-actions .secondary-action,
+.blueprint-start .secondary-action {
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--muted);
+}
+
+.blueprint-actions .text-action {
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+}
+
+.blueprint-warning {
+  border: 1px solid #e2b8ae;
+  border-radius: 18px;
+  background: #fff2ee;
+  padding: 16px;
+  color: var(--danger);
+}
+
+@media print {
+  body { background: #fff; }
+  .topbar, .progress, .blueprint-actions, .blueprint-warning, .saved { display: none !important; }
+  .shell { width: 100%; padding: 0; }
+  .blueprint-document { border: 0; box-shadow: none; padding: 0; }
+}
+
 @media (min-width: 720px) {
   .shell {
     padding-top: 54px;

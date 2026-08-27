@@ -174,4 +174,66 @@ describe('useLifeDesignSession', () => {
     expect(hook.result.current.checkpoint?.coachTurns[0]?.followUpAnswer).toContain('产品原型')
     hook.unmount()
   })
+
+  it('persists blueprint generation before the request and saves the completed markdown', async () => {
+    const repository = new CheckpointRepository('hook-blueprint-v4')
+    repositories.push(repository)
+    const created = createCheckpoint('blueprint-flow', '2026-08-27T08:00:00.000Z')
+    const complete = checkpointSchema.parse({
+      ...created,
+      stage: 'complete',
+      currentStepId: null,
+      completedStepIds: [
+        'here.dashboard',
+        'here.primary-problem',
+        'here.why-now',
+        'compass.workview',
+        'compass.lifeview',
+        'wayfinding.energy-map',
+        'odyssey.plans',
+        'odyssey.prototype',
+      ],
+      hereGuidance: null,
+    })
+    await repository.save(complete)
+    localStorage.setItem('life-design-active-session', complete.sessionId)
+    const markdown = `# 我的人生设计蓝图\n\n${'这是一段只根据用户真实素材形成的完整蓝图内容。'.repeat(10)}`
+    requestBlueprintMock.mockImplementation(async () => {
+      const persisted = await repository.load(complete.sessionId)
+      expect(persisted?.blueprint.status).toBe('generating')
+      return { title: '我的人生设计蓝图', markdown }
+    })
+
+    const hook = renderHook(() => useLifeDesignSession(repository))
+    await waitFor(() => expect(hook.result.current.status).toBe('ready'))
+    await act(async () => {
+      await hook.result.current.generateBlueprint()
+    })
+
+    expect(hook.result.current.checkpoint?.blueprint.status).toBe('complete')
+    expect(hook.result.current.checkpoint?.blueprint.markdown).toBe(markdown)
+    hook.unmount()
+  })
+
+  it('turns an interrupted blueprint generation into a retryable saved failure', async () => {
+    const repository = new CheckpointRepository('hook-blueprint-recovery-v4')
+    repositories.push(repository)
+    const created = createCheckpoint('blueprint-recovery', '2026-08-27T08:00:00.000Z')
+    await repository.save(
+      checkpointSchema.parse({
+        ...created,
+        stage: 'complete',
+        currentStepId: null,
+        hereGuidance: null,
+        blueprint: { status: 'generating' },
+      }),
+    )
+    localStorage.setItem('life-design-active-session', created.sessionId)
+
+    const hook = renderHook(() => useLifeDesignSession(repository))
+    await waitFor(() => expect(hook.result.current.status).toBe('ready'))
+    expect(hook.result.current.checkpoint?.blueprint.status).toBe('failed')
+    expect(hook.result.current.checkpoint?.blueprint.error).toContain('中断')
+    hook.unmount()
+  })
 })

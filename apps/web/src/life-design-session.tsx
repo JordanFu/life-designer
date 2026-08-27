@@ -3,7 +3,6 @@
 import { useEffect, useMemo } from 'react'
 import { CheckpointRepository } from '@life-design/checkpoint'
 import {
-  isReadyForBlueprint,
   stageLabels,
   steps,
   type LifeDesignResponse,
@@ -11,6 +10,7 @@ import {
 } from '@life-design/core'
 import { StepForm } from './step-form'
 import { CoachMoment } from './coach-moment'
+import { BlueprintView } from './blueprint-view'
 import { GuidedHereFlow } from './guided-here-flow'
 import { useLifeDesignSession } from './use-life-design-session'
 
@@ -38,6 +38,9 @@ export function LifeDesignSession() {
     generateCoachMoment,
     continueAfterCoach,
     skipCoachMoment,
+    generateBlueprint,
+    downloadBlueprint,
+    printBlueprint,
     exportCheckpoint,
   } = useLifeDesignSession(repository)
 
@@ -48,7 +51,6 @@ export function LifeDesignSession() {
   }
 
   const currentIndex = step ? steps.findIndex((item) => item.id === step.id) : steps.length
-  const ready = isReadyForBlueprint(checkpoint)
   const currentStageIndex =
     checkpoint.stage === 'complete' ? stageOrder.length : stageOrder.indexOf(checkpoint.stage)
 
@@ -133,19 +135,13 @@ export function LifeDesignSession() {
           </p>
         </>
       ) : (
-        <section className="completion-card">
-          <p className="completion-kicker">四阶段素材已齐全</p>
-          <h2>现在才到了生成蓝图的起点。</h2>
-          <p>
-            你已经完成四个仪表盘、真问题、工作观与人生观、能量地图、三个五年版本和一个原型行动。下一批会接入 BYOK，让 AI 基于这些真实素材继续追问并生成《个人人生设计蓝图》。
-          </p>
-          <div className="completion-actions">
-            <button disabled={!ready} onClick={exportCheckpoint}>
-              导出人生设计素材
-            </button>
-            <span>当前导出的是结构化素材，不冒充最终蓝图。</span>
-          </div>
-        </section>
+        <BlueprintView
+          blueprint={checkpoint.blueprint}
+          onGenerate={generateBlueprint}
+          onDownload={downloadBlueprint}
+          onPrint={printBlueprint}
+          onExportMaterials={exportCheckpoint}
+        />
       )}
 
       {error && <p className="error">{error}。上一次完整保存的内容仍然保留。</p>}

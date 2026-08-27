@@ -4,20 +4,24 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { CheckpointRepository } from '@life-design/checkpoint'
 import {
   advanceAfterSavedResponse,
+  beginBlueprint,
+  completeBlueprint,
   completeCoachMoment,
   completeHereGuidance,
   createCheckpoint,
+  failBlueprint,
   getStep,
   goBackHereGuidance,
   recordResponse,
   recordCoachTurn,
+  recoverInterruptedBlueprint,
   saveHereGuidance,
   skipCoachMoment as skipCoachMomentTransition,
   type HereGuidance,
   type LifeDesignCheckpoint,
   type LifeDesignResponse,
 } from '@life-design/core'
-import { requestCoach } from './local-codex-api'
+import { requestBlueprint, requestCoach } from './local-codex-api'
 
 const SESSION_KEY = 'life-design-active-session'
 
@@ -36,6 +40,10 @@ export function useLifeDesignSession(repository: CheckpointRepository) {
       const restored = existingId ? await repository.load(existingId) : null
       let next = restored ?? createCheckpoint(crypto.randomUUID(), new Date().toISOString())
       if (!restored) await repository.save(next)
+      if (next.blueprint.status === 'generating') {
+        next = recoverInterruptedBlueprint(next, new Date().toISOString())
+        await repository.save(next)
+      }
       if (next.pendingOperation && !next.coachPendingAfter) {
         next = advanceAfterSavedResponse(next, new Date().toISOString())
         await repository.save(next)
@@ -205,6 +213,49 @@ export function useLifeDesignSession(repository: CheckpointRepository) {
     }
   }, [checkpoint, repository])
 
+  const generateBlueprint = useCallback(async () => {
+    if (!checkpoint) return false
+    setError(null)
+    let generating: LifeDesignCheckpoint
+    try {
+      generating = beginBlueprint(checkpoint, new Date().toISOString())
+      await repository.save(generating)
+      setCheckpoint(generating)
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : '无法开始生成蓝图')
+      return false
+    }
+
+    try {
+      const result = await requestBlueprint({ checkpoint: generating })
+      const completed = completeBlueprint(generating, result.markdown, new Date().toISOString())
+      await repository.save(completed)
+      setCheckpoint(completed)
+      return true
+    } catch (cause) {
+      const message = cause instanceof Error ? cause.message : '本地 Codex 暂时不可用'
+      const failed = failBlueprint(generating, message, new Date().toISOString())
+      await repository.save(failed)
+      setCheckpoint(failed)
+      return false
+    }
+  }, [checkpoint, repository])
+
+  const downloadBlueprint = useCallback(() => {
+    const markdown = checkpoint?.blueprint.markdown
+    if (!markdown) return
+    const blob = new Blob([markdown], { type: 'text/markdown;charset=utf-8' })
+    const link = document.createElement('a')
+    link.href = URL.createObjectURL(blob)
+    link.download = '人生设计蓝图.md'
+    document.body.append(link)
+    link.click()
+    link.remove()
+    URL.revokeObjectURL(link.href)
+  }, [checkpoint])
+
+  const printBlueprint = useCallback(() => window.print(), [])
+
   const exportCheckpoint = useCallback(() => {
     if (!checkpoint) return
     const blob = new Blob([JSON.stringify(checkpoint, null, 2)], {
@@ -249,6 +300,9 @@ export function useLifeDesignSession(repository: CheckpointRepository) {
     generateCoachMoment,
     continueAfterCoach,
     skipCoachMoment,
+    generateBlueprint,
+    downloadBlueprint,
+    printBlueprint,
     exportCheckpoint,
   }
 }
