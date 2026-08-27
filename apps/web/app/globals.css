@@ -1,35 +1,43 @@
 :root {
   color-scheme: light;
-  --paper: #f5f0e7;
+  --paper: #f4efe6;
   --ink: #1f2925;
   --muted: #68736d;
-  --line: #d8d2c7;
-  --accent: #375f50;
-  --card: rgba(255, 255, 255, 0.72);
+  --line: #d6d0c4;
+  --accent: #315e4d;
+  --accent-soft: #dce8e1;
+  --card: rgba(255, 255, 255, 0.8);
+  --danger: #9b3d32;
 }
 
 * {
   box-sizing: border-box;
 }
 
+html {
+  min-width: 320px;
+}
+
 body {
   margin: 0;
   background:
-    radial-gradient(circle at 12% 8%, rgba(255, 255, 255, 0.8), transparent 36%),
+    radial-gradient(circle at 12% 5%, rgba(255, 255, 255, 0.92), transparent 34%),
     var(--paper);
   color: var(--ink);
   font-family: ui-sans-serif, system-ui, "PingFang SC", "Microsoft YaHei", sans-serif;
 }
 
 button,
+input,
+select,
 textarea {
   font: inherit;
 }
 
 .shell {
-  width: min(100% - 32px, 760px);
+  width: min(100% - 32px, 820px);
   margin: 0 auto;
-  padding: 28px 0 64px;
+  padding: 28px 0 72px;
 }
 
 .loading {
@@ -39,8 +47,12 @@ textarea {
 .topbar {
   display: flex;
   justify-content: space-between;
-  gap: 20px;
+  gap: 18px;
   align-items: start;
+}
+
+.topbar > div {
+  min-width: 0;
 }
 
 .eyebrow {
@@ -50,12 +62,16 @@ textarea {
   letter-spacing: 0.15em;
 }
 
+h1,
+h2 {
+  font-family: ui-serif, "Songti SC", serif;
+}
+
 h1 {
   margin: 0;
-  font-family: ui-serif, "Songti SC", serif;
-  font-size: clamp(28px, 8vw, 48px);
+  font-size: clamp(28px, 7vw, 48px);
   font-weight: 600;
-  letter-spacing: -0.03em;
+  letter-spacing: -0.035em;
 }
 
 .saved {
@@ -66,7 +82,7 @@ h1 {
 
 .progress {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   padding: 0;
   margin: 32px 0;
   list-style: none;
@@ -74,9 +90,14 @@ h1 {
 }
 
 .progress li {
+  min-width: 0;
   padding-top: 10px;
   color: var(--muted);
   font-size: 12px;
+}
+
+.progress li:last-child {
+  text-align: right;
 }
 
 .progress .active {
@@ -86,99 +107,315 @@ h1 {
   font-weight: 700;
 }
 
-.conversation {
+.progress .completed {
+  color: var(--accent);
+}
+
+.step-card,
+.completion-card,
+.legacy-notice {
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  background: var(--card);
+  box-shadow: 0 18px 55px rgba(50, 60, 55, 0.06);
+}
+
+.step-card,
+.completion-card {
+  padding: 22px;
+}
+
+.step-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.step-card h2,
+.completion-card h2 {
+  margin: 0;
+  font-size: clamp(25px, 6vw, 36px);
+  font-weight: 600;
+}
+
+.step-prompt {
+  margin: 16px 0 8px;
+  font: 500 20px/1.55 ui-serif, "Songti SC", serif;
+}
+
+.step-hint,
+.completion-card p,
+.legacy-notice p,
+.pause-note {
+  color: var(--muted);
+  line-height: 1.7;
+}
+
+.step-hint {
+  margin: 0;
+}
+
+.legacy-notice {
+  margin-bottom: 18px;
+  padding: 16px 18px;
+  background: #fff6dc;
+}
+
+.legacy-notice p {
+  margin: 5px 0 0;
+}
+
+.step-form {
+  display: grid;
+  gap: 18px;
+  margin-top: 20px;
+}
+
+.step-form > button,
+.completion-actions button {
+  width: 100%;
+}
+
+.field-stack {
+  display: grid;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.field-stack input,
+.field-stack select,
+.field-stack textarea {
+  width: 100%;
+  min-height: 46px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: white;
+  padding: 12px 13px;
+  color: var(--ink);
+}
+
+.field-stack textarea {
+  resize: vertical;
+  line-height: 1.6;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  outline: 3px solid rgba(49, 94, 77, 0.16);
+  border-color: var(--accent);
+}
+
+input[type="range"] {
+  accent-color: var(--accent);
+}
+
+.score-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.score-row {
+  display: grid;
+  grid-template-columns: minmax(110px, 1fr) minmax(100px, 1.4fr) 34px;
+  gap: 12px;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--card);
+  padding: 14px;
+}
+
+.score-row span {
+  display: grid;
+  gap: 3px;
+}
+
+.score-row small {
+  color: var(--muted);
+}
+
+.score-row output {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 750;
+}
+
+.event-grid,
+.plan-grid {
+  display: grid;
+  gap: 16px;
+}
+
+.event-card,
+.plan-card,
+.choice-fieldset {
+  min-width: 0;
+  margin: 0;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--card);
+  padding: 18px;
+}
+
+.event-card legend,
+.plan-card legend,
+.choice-fieldset legend {
+  padding: 0 8px;
+  color: var(--accent);
+  font-weight: 750;
+}
+
+.event-card,
+.plan-card {
   display: grid;
   gap: 14px;
 }
 
-.question,
-.answer {
+.two-column,
+.rating-grid,
+.choice-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.rating-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.rating-grid label {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.choice-grid {
+  margin-top: 8px;
+}
+
+.choice-grid.three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.choice-card {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 5px 9px;
+  align-items: start;
   border: 1px solid var(--line);
-  border-radius: 20px;
-  padding: 20px;
+  border-radius: 14px;
+  background: white;
+  padding: 13px;
+  cursor: pointer;
 }
 
-.question {
-  background: var(--card);
-  box-shadow: 0 18px 50px rgba(50, 60, 55, 0.06);
+.choice-card input {
+  width: 18px;
+  height: 18px;
+  margin: 1px 0 0;
+  accent-color: var(--accent);
 }
 
-.question p {
-  margin: 0 0 8px;
-  color: var(--accent);
+.choice-card small {
+  grid-column: 2;
+  color: var(--muted);
+  line-height: 1.45;
 }
 
-.question h2 {
-  margin: 0;
-  font: 500 22px/1.45 ui-serif, "Songti SC", serif;
-}
-
-.answer {
-  justify-self: end;
-  max-width: 88%;
+button {
+  min-height: 50px;
+  border: 0;
+  border-radius: 999px;
+  padding: 0 24px;
   background: var(--accent);
   color: white;
-  line-height: 1.7;
+  font-weight: 700;
+  cursor: pointer;
 }
 
-.composer {
+button:disabled,
+input:disabled,
+select:disabled,
+textarea:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.pause-note {
+  margin: 18px 2px 0;
+  font-size: 13px;
+}
+
+.completion-kicker {
+  margin: 0 0 8px;
+  color: var(--accent) !important;
+  font-weight: 750;
+}
+
+.completion-actions {
   display: grid;
   gap: 10px;
   margin-top: 20px;
 }
 
-.composer label {
-  font-size: 13px;
+.completion-actions span {
   color: var(--muted);
-}
-
-textarea {
-  width: 100%;
-  resize: vertical;
-  border: 1px solid var(--line);
-  border-radius: 16px;
-  background: white;
-  padding: 14px;
-  color: var(--ink);
-  line-height: 1.6;
-}
-
-textarea:focus {
-  outline: 3px solid rgba(55, 95, 80, 0.16);
-  border-color: var(--accent);
-}
-
-button {
-  min-height: 48px;
-  border: 0;
-  border-radius: 999px;
-  padding: 0 22px;
-  background: var(--accent);
-  color: white;
-  cursor: pointer;
-}
-
-button:disabled {
-  cursor: not-allowed;
-  opacity: 0.5;
+  font-size: 12px;
+  text-align: center;
 }
 
 .error {
-  color: #9b3d32;
-}
-
-.export {
-  margin-top: 20px;
-  width: 100%;
+  color: var(--danger);
 }
 
 @media (min-width: 720px) {
   .shell {
-    padding-top: 56px;
+    padding-top: 54px;
   }
 
-  .question,
-  .answer {
-    padding: 26px;
+  .step-card,
+  .completion-card {
+    padding: 28px;
+  }
+
+  .two-column,
+  .choice-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .event-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 520px) {
+  .score-row {
+    grid-template-columns: 1fr 36px;
+  }
+
+  .score-row input {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  .score-row output {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .rating-grid,
+  .choice-grid.three {
+    grid-template-columns: 1fr;
   }
 }
