@@ -1,75 +1,105 @@
 import {
   checkpointSchema,
+  legacyCheckpointSchema,
+  lifeDesignResponseSchema,
   type LifeDesignCheckpoint,
-  type QuestionId,
+  type LifeDesignResponse,
 } from './checkpoint'
-
-export const questions: ReadonlyArray<{ id: QuestionId; text: string }> = [
-  {
-    id: 'here.dashboard',
-    text: '如果给健康、工作、娱乐和爱各打 0 到 10 分，你会怎么打？哪一项最亮红灯？',
-  },
-  {
-    id: 'here.primary-problem',
-    text: '此刻你最想解决、也最让你焦虑的那个人生问题是什么？',
-  },
-  {
-    id: 'here.why-now',
-    text: '最近哪一件具体的事，让这个问题变得不能再忽略？',
-  },
-]
+import { steps } from './steps'
 
 export function createCheckpoint(sessionId: string, now: string): LifeDesignCheckpoint {
   return checkpointSchema.parse({
-    schemaVersion: 1,
+    schemaVersion: 2,
     sessionId,
     revision: 1,
     createdAt: now,
     updatedAt: now,
     stage: 'here',
-    currentQuestionId: questions[0]?.id ?? null,
-    completedQuestionIds: [],
-    answers: [],
+    currentStepId: steps[0]?.id ?? null,
+    completedStepIds: [],
+    responses: [],
     pendingOperation: null,
+    legacyNotes: [],
   })
 }
 
-export function recordAnswer(
+export function migrateCheckpoint(raw: unknown, now: string): LifeDesignCheckpoint {
+  const current = checkpointSchema.safeParse(raw)
+  if (current.success) return current.data
+
+  const legacy = legacyCheckpointSchema.parse(raw)
+  return checkpointSchema.parse({
+    schemaVersion: 2,
+    sessionId: legacy.sessionId,
+    revision: legacy.revision + 1,
+    createdAt: legacy.createdAt,
+    updatedAt: now,
+    stage: 'here',
+    currentStepId: steps[0]?.id ?? null,
+    completedStepIds: [],
+    responses: [],
+    pendingOperation: null,
+    legacyNotes: legacy.answers.map((answer) => answer.text),
+  })
+}
+
+export function recordResponse(
   checkpoint: LifeDesignCheckpoint,
-  text: string,
+  response: LifeDesignResponse,
   now: string,
 ): LifeDesignCheckpoint {
-  if (!checkpoint.currentQuestionId) throw new Error('Session is complete')
+  if (!checkpoint.currentStepId) throw new Error('Session is complete')
+  if (checkpoint.pendingOperation) throw new Error('A saved response is waiting to advance')
+
+  const validResponse = lifeDesignResponseSchema.parse(response)
+  if (validResponse.stepId !== checkpoint.currentStepId) {
+    throw new Error('Response does not match the current step')
+  }
+
   return checkpointSchema.parse({
     ...checkpoint,
     revision: checkpoint.revision + 1,
     updatedAt: now,
-    answers: [
-      ...checkpoint.answers,
-      { questionId: checkpoint.currentQuestionId, text, answeredAt: now },
+    responses: [
+      ...checkpoint.responses.filter((item) => item.stepId !== validResponse.stepId),
+      validResponse,
     ],
     pendingOperation: {
-      type: 'advance-question',
-      questionId: checkpoint.currentQuestionId,
+      type: 'advance-step',
+      stepId: checkpoint.currentStepId,
     },
   })
 }
 
-export function advanceAfterSavedAnswer(
+export function advanceAfterSavedResponse(
   checkpoint: LifeDesignCheckpoint,
   now: string,
 ): LifeDesignCheckpoint {
   if (!checkpoint.pendingOperation) {
-    throw new Error('No saved answer is waiting to advance')
+    throw new Error('No saved response is waiting to advance')
   }
-  const completedId = checkpoint.pendingOperation.questionId
-  const index = questions.findIndex((question) => question.id === completedId)
+
+  const completedId = checkpoint.pendingOperation.stepId
+  const index = steps.findIndex((step) => step.id === completedId)
+  if (index < 0) throw new Error('Unknown completed step')
+  const next = steps[index + 1] ?? null
+
   return checkpointSchema.parse({
     ...checkpoint,
     revision: checkpoint.revision + 1,
     updatedAt: now,
-    currentQuestionId: questions[index + 1]?.id ?? null,
-    completedQuestionIds: [...checkpoint.completedQuestionIds, completedId],
+    stage: next?.stage ?? 'complete',
+    currentStepId: next?.id ?? null,
+    completedStepIds: Array.from(new Set([...checkpoint.completedStepIds, completedId])),
     pendingOperation: null,
   })
+}
+
+export function isReadyForBlueprint(checkpoint: LifeDesignCheckpoint): boolean {
+  return (
+    checkpoint.currentStepId === null &&
+    checkpoint.pendingOperation === null &&
+    checkpoint.completedStepIds.length === steps.length &&
+    steps.every((step) => checkpoint.responses.some((response) => response.stepId === step.id))
+  )
 }
