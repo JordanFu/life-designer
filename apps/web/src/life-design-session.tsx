@@ -10,6 +10,7 @@ import {
   type LifeDesignStage,
 } from '@life-design/core'
 import { StepForm } from './step-form'
+import { CoachMoment } from './coach-moment'
 import { GuidedHereFlow } from './guided-here-flow'
 import { useLifeDesignSession } from './use-life-design-session'
 
@@ -27,10 +28,16 @@ export function LifeDesignSession() {
     step,
     status,
     error,
+    coachStatus,
+    coachError,
+    activeCoachTurn,
     submitResponse,
     saveHereDraft,
     goBackHere,
     completeHere,
+    generateCoachMoment,
+    continueAfterCoach,
+    skipCoachMoment,
     exportCheckpoint,
   } = useLifeDesignSession(repository)
 
@@ -79,7 +86,22 @@ export function LifeDesignSession() {
         </aside>
       )}
 
-      {checkpoint.hereGuidance ? (
+      {checkpoint.coachPendingAfter ? (
+        <>
+          <CoachMoment
+            anchor={checkpoint.coachPendingAfter}
+            turn={activeCoachTurn}
+            status={coachStatus}
+            error={coachError}
+            onGenerate={generateCoachMoment}
+            onContinue={continueAfterCoach}
+            onSkip={skipCoachMoment}
+          />
+          <p className="pause-note">
+            可以随时关闭页面。你的原始回答已保存，下次仍会回到这次教练回应。
+          </p>
+        </>
+      ) : checkpoint.hereGuidance ? (
         <>
           <GuidedHereFlow
             guidance={checkpoint.hereGuidance}

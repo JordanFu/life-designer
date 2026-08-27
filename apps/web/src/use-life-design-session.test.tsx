@@ -1,9 +1,19 @@
 import 'fake-indexeddb/auto'
 import { act, renderHook, waitFor } from '@testing-library/react'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { CheckpointRepository } from '@life-design/checkpoint'
-import { createCheckpoint, recordResponse, type HereGuidance } from '@life-design/core'
+import { checkpointSchema, createCheckpoint, recordResponse, type HereGuidance } from '@life-design/core'
 import { useLifeDesignSession } from './use-life-design-session'
+
+const { requestCoachMock, requestBlueprintMock } = vi.hoisted(() => ({
+  requestCoachMock: vi.fn(),
+  requestBlueprintMock: vi.fn(),
+}))
+
+vi.mock('./local-codex-api', () => ({
+  requestCoach: requestCoachMock,
+  requestBlueprint: requestBlueprintMock,
+}))
 
 const dashboardResponse = {
   stepId: 'here.dashboard' as const,
@@ -20,6 +30,8 @@ describe('useLifeDesignSession', () => {
     }
     repositories.length = 0
     localStorage.clear()
+    requestCoachMock.mockReset()
+    requestBlueprintMock.mockReset()
   })
 
   it('saves and restores the exact guided micro-step and draft', async () => {
@@ -89,10 +101,11 @@ describe('useLifeDesignSession', () => {
 
     expect(hook.result.current.step?.id).toBe('compass.workview')
     expect(hook.result.current.checkpoint?.stageReflections.here).toContain('真实访谈')
+    expect(hook.result.current.checkpoint?.coachPendingAfter).toBe('here.guided')
     hook.unmount()
   })
 
-  it('finishes a saved pending advance after a crash', async () => {
+  it('restores a saved answer at its pending coach moment after a crash', async () => {
     const repository = new CheckpointRepository('hook-pending-v2')
     repositories.push(repository)
     const initial = createCheckpoint('session-pending', '2026-08-27T08:00:00.000Z')
@@ -106,8 +119,59 @@ describe('useLifeDesignSession', () => {
 
     const restored = renderHook(() => useLifeDesignSession(repository))
     await waitFor(() => expect(restored.result.current.status).toBe('ready'))
-    expect(restored.result.current.step?.id).toBe('here.primary-problem')
+    expect(restored.result.current.step?.id).toBe('here.dashboard')
+    expect(restored.result.current.checkpoint?.coachPendingAfter).toBe('here.dashboard')
     expect(restored.result.current.checkpoint?.responses).toHaveLength(1)
     restored.unmount()
+  })
+
+  it('saves before requesting a coach response and advances only after the user continues', async () => {
+    const repository = new CheckpointRepository('hook-coach-v4')
+    repositories.push(repository)
+    const created = createCheckpoint('coach-flow', '2026-08-27T08:00:00.000Z')
+    const compass = checkpointSchema.parse({
+      ...created,
+      stage: 'compass',
+      currentStepId: 'compass.workview',
+      completedStepIds: ['here.dashboard', 'here.primary-problem', 'here.why-now'],
+      hereGuidance: null,
+    })
+    await repository.save(compass)
+    localStorage.setItem('life-design-active-session', compass.sessionId)
+    requestCoachMock.mockImplementation(async () => {
+      const persisted = await repository.load(compass.sessionId)
+      expect(persisted?.coachPendingAfter).toBe('compass.workview')
+      expect(persisted?.responses.some((item) => item.stepId === 'compass.workview')).toBe(true)
+      return {
+        acknowledgement: '你把工作看成一种创造价值，同时保有选择空间的方式。',
+        insight: '这里可能存在自主、稳定和影响力之间需要被看见的排序。',
+        followUp: '最近哪一次工作经历最接近你说的理想状态？',
+      }
+    })
+
+    const hook = renderHook(() => useLifeDesignSession(repository))
+    await waitFor(() => expect(hook.result.current.status).toBe('ready'))
+    await act(async () => {
+      await hook.result.current.submitResponse({
+        stepId: 'compass.workview',
+        kind: 'text',
+        text: '工作是创造价值，同时保有选择空间。',
+      })
+    })
+    expect(hook.result.current.step?.id).toBe('compass.workview')
+    expect(hook.result.current.checkpoint?.coachPendingAfter).toBe('compass.workview')
+
+    await act(async () => {
+      await hook.result.current.generateCoachMoment()
+    })
+    expect(hook.result.current.checkpoint?.coachTurns).toHaveLength(1)
+    expect(hook.result.current.step?.id).toBe('compass.workview')
+
+    await act(async () => {
+      await hook.result.current.continueAfterCoach('一次从零搭建产品原型的经历。')
+    })
+    expect(hook.result.current.step?.id).toBe('compass.lifeview')
+    expect(hook.result.current.checkpoint?.coachTurns[0]?.followUpAnswer).toContain('产品原型')
+    hook.unmount()
   })
 })

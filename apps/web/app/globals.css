@@ -695,6 +695,126 @@ textarea:disabled {
   line-height: 1.6;
 }
 
+.coach-card {
+  display: grid;
+  gap: 20px;
+  border: 1px solid rgba(49, 94, 77, 0.28);
+  border-radius: 24px;
+  background: linear-gradient(155deg, rgba(255, 255, 255, 0.94), rgba(220, 232, 225, 0.76));
+  box-shadow: 0 22px 65px rgba(36, 63, 52, 0.1);
+  padding: 24px;
+}
+
+.coach-card h2,
+.coach-card p {
+  margin: 0;
+}
+
+.coach-card h2 {
+  font-size: clamp(23px, 5vw, 32px);
+  line-height: 1.35;
+}
+
+.coach-card > p:not(.coach-kicker):not(.coach-disclosure) {
+  color: var(--muted);
+  line-height: 1.75;
+}
+
+.coach-kicker,
+.coach-section > span,
+.coach-follow-up > span {
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 750;
+  letter-spacing: 0.04em;
+}
+
+.coach-section {
+  display: grid;
+  gap: 7px;
+  border-left: 2px solid rgba(49, 94, 77, 0.34);
+  padding-left: 14px;
+}
+
+.coach-section p {
+  font: 500 17px/1.75 ui-serif, "Songti SC", serif;
+}
+
+.coach-section.insight {
+  border-left-color: #bb7b48;
+}
+
+.coach-follow-up {
+  display: grid;
+  gap: 12px;
+  border-top: 1px solid rgba(49, 94, 77, 0.18);
+  padding-top: 20px;
+}
+
+.coach-follow-up label {
+  display: grid;
+  gap: 7px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.coach-follow-up textarea {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 15px;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 13px 14px;
+  color: var(--ink);
+  line-height: 1.65;
+  resize: vertical;
+}
+
+.coach-actions {
+  display: grid;
+  gap: 10px;
+}
+
+.coach-actions .secondary-action {
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--muted);
+}
+
+.coach-actions .text-action {
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  box-shadow: none;
+}
+
+.coach-disclosure {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.thinking-line {
+  height: 4px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(49, 94, 77, 0.12);
+}
+
+.thinking-line span {
+  display: block;
+  width: 34%;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent);
+  animation: coach-thinking 1.4s ease-in-out infinite alternate;
+}
+
+@keyframes coach-thinking {
+  from { transform: translateX(-15%); }
+  to { transform: translateX(210%); }
+}
+
 @media (min-width: 720px) {
   .shell {
     padding-top: 54px;
