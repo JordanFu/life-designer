@@ -5,6 +5,8 @@ import {
   coachTurnDraftSchema,
 } from '@life-design/core'
 
+export { coachTurnDraftSchema } from '@life-design/core'
+
 export const coachRequestSchema = z.object({
   anchor: coachAnchorSchema,
   checkpoint: checkpointSchema,
