@@ -70,6 +70,7 @@ export function LifeDesignSession() {
             onChange={(event) => setText(event.target.value)}
             placeholder="不用组织得很完整，写下此刻最真实的答案。"
             rows={5}
+            disabled={status === 'saving'}
           />
           <button disabled={!text.trim() || status === 'saving'}>保存并继续</button>
         </form>
