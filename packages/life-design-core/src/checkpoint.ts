@@ -139,6 +139,11 @@ export const checkpointSchema = z.object({
   schemaVersion: z.literal(3),
   ...checkpointFields,
   hereGuidance: hereGuidanceSchema.nullable(),
+  stageReflections: z
+    .object({
+      here: z.string().trim().min(10).max(3000).optional(),
+    })
+    .default({}),
 })
 
 const legacyQuestionIdSchema = z.enum([

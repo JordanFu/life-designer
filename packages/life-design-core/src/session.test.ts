@@ -1,15 +1,33 @@
 import { describe, expect, it } from 'vitest'
+import type { HereGuidance } from './checkpoint'
 import { steps } from './steps'
 import {
   advanceAfterSavedResponse,
+  completeHereGuidance,
   createCheckpoint,
+  goBackHereGuidance,
   isReadyForBlueprint,
   migrateCheckpoint,
   recordResponse,
+  saveHereGuidance,
 } from './session'
 
 const startedAt = '2026-08-27T08:00:00.000Z'
 const answeredAt = '2026-08-27T08:01:00.000Z'
+
+const completeHereDraft: HereGuidance = {
+  currentMicroStepId: 'here.summary',
+  scores: { health: 6, work: 2, play: 4, love: 8 },
+  focus: 'work',
+  problemShapeId: 'work.direction',
+  problemStatement: '我想换方向，但不知道该往哪里走。',
+  momentWindow: 'this-week',
+  momentDetails: '周一开会时，我发现自己对接下来的项目完全提不起兴趣。',
+  feelings: ['tired', 'lost'],
+  feelingNote: '',
+  boundaryType: 'mixed',
+  nextAction: '约一位不同岗位的朋友聊聊真实工作日常。',
+}
 
 describe('four-stage life-design session', () => {
   it('starts a v3 checkpoint at the guided welcome micro-step', () => {
@@ -22,6 +40,96 @@ describe('four-stage life-design session', () => {
       feelingNote: '',
     })
     expect(checkpoint.currentStepId).toBe('here.dashboard')
+  })
+
+  it('saves and returns between guided micro-steps without losing answers', () => {
+    const created = createCheckpoint('session-1', startedAt)
+    const initial = {
+      ...created,
+      hereGuidance: {
+        currentMicroStepId: 'here.focus' as const,
+        scores: completeHereDraft.scores,
+        feelings: [],
+        feelingNote: '',
+      },
+    }
+    const focused = saveHereGuidance(
+      initial,
+      {
+        currentMicroStepId: 'here.problem-shape',
+        scores: completeHereDraft.scores,
+        focus: 'work',
+        feelings: [],
+        feelingNote: '',
+      },
+      answeredAt,
+    )
+
+    expect(focused.revision).toBe(initial.revision + 1)
+    expect(focused.hereGuidance?.focus).toBe('work')
+
+    const previous = goBackHereGuidance(focused, '2026-08-27T08:02:00.000Z')
+    expect(previous.hereGuidance?.currentMicroStepId).toBe('here.focus')
+    expect(previous.hereGuidance?.scores).toEqual(completeHereDraft.scores)
+    expect(previous.hereGuidance?.focus).toBe('work')
+  })
+
+  it('atomically turns a confirmed reflection into the three canonical here responses', () => {
+    const initial = createCheckpoint('session-1', startedAt)
+    const ready = {
+      ...initial,
+      hereGuidance: completeHereDraft,
+    }
+    const reflection = '我听到的是：你想重新寻找更适合自己的工作方向，并先通过一次真实访谈获得信息。'
+    const completed = completeHereGuidance(ready, reflection, answeredAt)
+
+    expect(completed.currentStepId).toBe('compass.workview')
+    expect(completed.stage).toBe('compass')
+    expect(completed.hereGuidance).toBeNull()
+    expect(completed.stageReflections.here).toBe(reflection)
+    expect(completed.completedStepIds).toEqual(
+      expect.arrayContaining(['here.dashboard', 'here.primary-problem', 'here.why-now']),
+    )
+    expect(completed.responses.filter((item) => item.stepId.startsWith('here.'))).toHaveLength(3)
+  })
+
+  it('migrates a partially completed v2 session to the first missing guided moment', () => {
+    const migrated = migrateCheckpoint(
+      {
+        schemaVersion: 2,
+        sessionId: 'v2-session',
+        revision: 4,
+        createdAt: startedAt,
+        updatedAt: answeredAt,
+        stage: 'here',
+        currentStepId: 'here.why-now',
+        completedStepIds: ['here.dashboard', 'here.primary-problem'],
+        responses: [
+          {
+            stepId: 'here.dashboard',
+            kind: 'dashboard',
+            scores: completeHereDraft.scores,
+          },
+          {
+            stepId: 'here.primary-problem',
+            kind: 'text',
+            text: completeHereDraft.problemStatement,
+          },
+        ],
+        pendingOperation: null,
+        legacyNotes: [],
+      },
+      '2026-08-27T09:00:00.000Z',
+    )
+
+    expect(migrated.schemaVersion).toBe(3)
+    expect(migrated.responses).toHaveLength(2)
+    expect(migrated.hereGuidance).toMatchObject({
+      currentMicroStepId: 'here.moment-when',
+      scores: completeHereDraft.scores,
+      focus: 'work',
+      problemStatement: completeHereDraft.problemStatement,
+    })
   })
 
   it('uses eight canonical mixed-input steps across four stages', () => {

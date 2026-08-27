@@ -56,10 +56,11 @@ describe('CheckpointRepository', () => {
 
     const migrated = await repository.load('legacy-session')
     expect(migrated).toMatchObject({
-      schemaVersion: 2,
+      schemaVersion: 3,
       currentStepId: 'here.dashboard',
       legacyNotes: ['工作让我焦虑。'],
+      hereGuidance: { currentMicroStepId: 'here.welcome' },
     })
-    expect(await repository.checkpoints.get('legacy-session')).toMatchObject({ schemaVersion: 2 })
+    expect(await repository.checkpoints.get('legacy-session')).toMatchObject({ schemaVersion: 3 })
   })
 })
